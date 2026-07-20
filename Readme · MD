@@ -47,8 +47,15 @@ git push -u origin main
    - `BOT_TOKEN` = the token from BotFather
    - `REF_PARAM` = the query parameter your exchange uses for referrals (e.g. `ref`, `affiliate_id`, `r`, `code`)
    - `REF_CODE` = your actual referral code/ID
-5. Railway detects `railway.json`/`Procfile` and runs `python bot.py` automatically
+5. Railway reads `railway.json` and runs `python bot.py` automatically
 6. Check **Deployments → Logs** — you should see `Bot starting...`
+7. **Important:** in the service's **Settings** tab, make sure no public **Networking/Domain** is required — this bot doesn't listen on a port (it uses polling), so Railway shouldn't health-check it as a web service. If your project was created as a "web service" type, that's fine as long as you're not relying on a generated domain; the bot runs regardless.
+
+### If the build fails with "Railpack could not determine how to build the app"
+This means Railway's builder didn't recognize the project. Make sure:
+- `railway.json` has `"builder": "RAILPACK"` (not the older `"NIXPACKS"`) — already set in this project
+- `bot.py` and `requirements.txt` sit at the **repo root**, not in a subfolder
+- If you still see this error, go to the service's Settings → check "Build" section shows Railpack, and trigger **Redeploy**
 
 ## 4. Test it
 Open Telegram, search `@tradinglink873bot`, hit **Start**, then send it a link containing
