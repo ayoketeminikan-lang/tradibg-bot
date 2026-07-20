@@ -1,0 +1,61 @@
+# Trading Link Bot (@tradinglink873bot)
+
+A Telegram bot that takes a trading/exchange link, rewrites it with **your** referral
+code, then shortens the result for easy sharing.
+
+## Files
+- `bot.py` — main bot logic
+- `requirements.txt` — Python dependencies
+- `Procfile` — process definition (used by Railway)
+- `railway.json` — Railway deploy config
+- `.env.example` — shows the required environment variables
+
+## How the conversion works
+When someone sends a link like:
+```
+https://exchange.com/signup?ref=someoneelse&utm=abc
+```
+The bot finds the `ref` parameter (configurable) and replaces its value with your
+own code, giving:
+```
+https://exchange.com/signup?ref=873&utm=abc
+```
+...then shortens that into a TinyURL link.
+
+## 1. Get your bot token
+1. Open Telegram, message **@BotFather**
+2. Send `/newbot`, follow the prompts, and set the username to `tradinglink873bot`
+3. BotFather gives you a token like `123456789:AAExxxxxxxxxxxxxxxxxxxxxxx` — copy it
+
+## 2. Push this project to GitHub
+```bash
+cd tradinglink873bot
+git init
+git add .
+git commit -m "Trading link converter bot"
+git branch -M main
+git remote add origin https://github.com/<your-username>/tradinglink873bot.git
+git push -u origin main
+```
+(Create the empty repo on GitHub first via github.com/new — don't add a README there, since this one already exists.)
+
+## 3. Deploy on Railway
+1. Go to https://railway.app and log in with GitHub
+2. Click **New Project → Deploy from GitHub repo**
+3. Select your `tradinglink873bot` repo
+4. Go to the project's **Variables** tab and add:
+   - `BOT_TOKEN` = the token from BotFather
+   - `REF_PARAM` = the query parameter your exchange uses for referrals (e.g. `ref`, `affiliate_id`, `r`, `code`)
+   - `REF_CODE` = your actual referral code/ID
+5. Railway detects `railway.json`/`Procfile` and runs `python bot.py` automatically
+6. Check **Deployments → Logs** — you should see `Bot starting...`
+
+## 4. Test it
+Open Telegram, search `@tradinglink873bot`, hit **Start**, then send it a link containing
+a referral parameter — it will reply with the rewritten + shortened version.
+
+## Notes
+- If your exchange uses a path-based referral (e.g. `/r/873` instead of `?ref=873`),
+  tell me and I'll adjust `convert_link()` — the current version only handles query-parameter-style codes.
+- Shortening uses the free TinyURL API (no key needed).
+- Never commit your real `BOT_TOKEN` to GitHub — it's excluded via `.gitignore` (only `.env.example` is tracked).
