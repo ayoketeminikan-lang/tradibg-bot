@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import logging
 import requests
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
@@ -89,26 +90,41 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text or ""
-    match = URL_REGEX.search(text)
+    try:
+        text = update.message.text or ""
+        match = URL_REGEX.search(text)
 
-    if not match:
+        if not match:
+            await update.message.reply_text(
+                "That doesn't look like a link. Send me a URL starting with http:// or https://"
+            )
+            return
+
+        long_url = match.group(1)
+        converted_url = convert_link(long_url)
+        short_url = shorten_url(converted_url)
+
         await update.message.reply_text(
-            "That doesn't look like a link. Send me a URL starting with http:// or https://"
+            f"✅ Converted link:\n{converted_url}\n\n"
+            f"🔗 Shortened:\n{short_url}"
         )
-        return
+    except Exception as e:
+        # Never let a single bad message crash the whole bot
+        logger.error(f"Error handling message: {e}")
+        try:
+            await update.message.reply_text(
+                "⚠️ Something went wrong processing that link. Please try again."
+            )
+        except Exception:
+            pass
 
-    long_url = match.group(1)
-    converted_url = convert_link(long_url)
-    short_url = shorten_url(converted_url)
 
-    await update.message.reply_text(
-        f"✅ Converted link:\n{converted_url}\n\n"
-        f"🔗 Shortened:\n{short_url}"
-    )
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """Global error handler so unexpected exceptions never crash the process."""
+    logger.error(f"Unhandled error: {context.error}", exc_info=context.error)
 
 
-def main():
+def build_app():
     if not BOT_TOKEN:
         raise RuntimeError(
             "BOT_TOKEN environment variable is not set. "
@@ -120,9 +136,26 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_error_handler(on_error)
 
-    logger.info("Bot starting...")
-    app.run_polling()
+    return app
+
+
+def main():
+    # Outer loop: if run_polling ever exits due to a network/connection error,
+    # wait a moment and restart instead of letting the process die.
+    while True:
+        try:
+            app = build_app()
+            logger.info("Bot starting...")
+            app.run_polling(drop_pending_updates=True, close_loop=False)
+        except Exception as e:
+            logger.error(f"Bot crashed with error: {e}. Restarting in 5 seconds...")
+            time.sleep(5)
+        else:
+            # run_polling returned normally (rare) - restart anyway to stay alive
+            logger.warning("Polling stopped unexpectedly. Restarting in 5 seconds...")
+            time.sleep(5)
 
 
 if __name__ == "__main__":
